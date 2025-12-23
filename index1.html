@@ -209,17 +209,6 @@
             background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 25px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative;
         }
-        /* 新增：答對時的綠色底色 */
-        .waterfall-card.card-correct {
-            background-color: #d4edda;
-            border-color: var(--correct-color);
-        }
-        /* 新增：答錯時的紅色底色 */
-        .waterfall-card.card-wrong {
-            background-color: #f8d7da;
-            border-color: var(--wrong-color);
-        }
-
         .waterfall-card.locked { opacity: 0.9; }
         .card-actions { position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; }
         .action-icon { cursor: pointer; font-size: 1.4em; transition: 0.2s; color: #bdc3c7; }
@@ -319,7 +308,7 @@
 
     <!-- 歡迎畫面 -->
     <div id="welcome-screen" class="container-box fade-in">
-        <h1>5-3 比熱</h1>
+        <h1>5-2 熱量</h1>
         <div style="font-size: 4em; text-align: center; margin: 20px;">⚛️🧪🔬🧬</div>
         <p style="text-align: center; font-size: 1.2em;">請輸入代號，準備進行元素分析！</p>
         
@@ -815,6 +804,7 @@
                 const card = document.createElement('div');
                 card.className = 'waterfall-card';
                 card.id = `card-${q.id}`;
+                if(quizState.locked[q.id]) card.classList.add('locked');
                 
                 // Header (Question + Actions)
                 const isFav = isFavorite(q.id);
@@ -859,15 +849,6 @@
 
                 card.innerHTML = actionsHtml + qTextHtml + imgHtml + optionsHtml + expHtml;
                 list.appendChild(card);
-
-                // 如果已經鎖定(作答過)，直接上色
-                if(quizState.locked[q.id]) {
-                    card.classList.add('locked');
-                    const correct = q.answer.substring(0,3);
-                    const userSel = quizState.answers[q.id] ? quizState.answers[q.id].substring(0,3) : '';
-                    if(userSel === correct) card.classList.add('card-correct');
-                    else card.classList.add('card-wrong');
-                }
             });
             
             // Restore scroll if possible? (Simpler: scroll to top)
@@ -884,18 +865,13 @@
             const correct = qData.answer.substring(0,3);
             const selected = option.substring(0,3);
             
-            // 取得卡片元素
-            const card = document.getElementById(`card-${qId}`);
-
             if(selected === correct) {
                 quizState.score++;
                 audioCorrect.play().catch(()=>{});
                 confetti({ particleCount: 50, origin: { y: 0.8 } });
-                if(card) card.classList.add('card-correct'); // 立即變綠
             } else {
                 audioFail.play().catch(()=>{});
                 addToMistake(qId);
-                if(card) card.classList.add('card-wrong'); // 立即變紅
             }
             
             // Save Progress (FIX: Use mode-specific key)
@@ -903,7 +879,9 @@
             
             // Update UI (Single Card)
             updateWaterfallStats();
-            
+            // Re-render only this card? Or simpler: reload all. 
+            // For performance on huge lists, ideally update DOM. Let's do DOM update.
+            const card = document.getElementById(`card-${qId}`);
             if(card) {
                 card.classList.add('locked');
                 const btns = card.querySelectorAll('.wf-opt-btn');
